@@ -31,5 +31,5 @@
 ![](https://foruda.gitee.com/images/1759849437616814597/2e4bf360_16281951.png "屏幕截图")
 ![](https://foruda.gitee.com/images/1759849441079456110/418c0ab2_16281951.png "屏幕截图")
 ![](https://foruda.gitee.com/images/1759849455870076253/eb796410_16281951.png "屏幕截图")
-![输入图片说明](https://foruda.gitee.com/images/1759849466777890163/384e8a47_16281951.png "屏幕截图")
+![](image.png)
 
