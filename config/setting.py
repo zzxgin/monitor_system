@@ -2,6 +2,10 @@
 import os
 #专门用于生成安全的随机数。
 import secrets
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+load_dotenv()
 
 DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'  # 调试模式，生产环境应设为False
 HOST = os.getenv('HOST', '0.0.0.0')  # 监听地址，0.0.0.0表示监听所有网络接口

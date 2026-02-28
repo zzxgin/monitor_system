@@ -1,5 +1,11 @@
 # 监控数据自动清理脚本
 # 删除7天前的旧数据，避免数据库过大
+import os
+import sys
+
+# 将项目根目录添加到搜索路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 def cleanup_old_data(days=7):
     try:
         # 导入数据库模型

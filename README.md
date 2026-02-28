@@ -24,7 +24,7 @@
   - JWT 登录验证与 API 授权认证
   - Flask-CORS 实现跨域访问
 - **维护脚本**
-  - 定期清理历史监控数据（`cleanup_data.py`）
+  - 定期清理历史监控数据（`scripts/cleanup_data.py`）
 
 ## 📁 项目结构
 
@@ -38,8 +38,9 @@ monitor_system/
 ├── mail/                     # 告警邮件模块
 ├── migrations/               # 数据库迁移文件
 ├── frontend/                 # Vue 3 前端项目
-├── monitor_client.py         # 监控 Agent 示例
-├── cleanup_data.py           # 清理脚本
+├── scripts/                  # 维护脚本与客户端
+│   ├── monitor_client.py     # 监控 Agent 示例
+│   └── cleanup_data.py       # 清理脚本
 ├── requirements.txt          # Python 依赖
 └── README.md                 # 项目说明（当前文件）
 ```
@@ -61,7 +62,12 @@ monitor_system/
    ```bash
    pip install -r requirements.txt
    ```
-4. 配置环境变量或修改 `config/setting.py`，填写数据库、JWT、邮件等信息
+4. 配置环境变量：
+   复制 `.env.example` 为 `.env`，并填写数据库、JWT、邮件等信息
+   ```bash
+   cp .env.example .env
+   # Windows: copy .env.example .env
+   ```
 5. 初始化数据库并执行迁移：
    ```bash
    flask db init
@@ -81,9 +87,9 @@ monitor_system/
 
 ## 📬 运行监控 Agent
 
-编辑 `monitor_client.py` 中的服务器地址和授权信息，执行：
+编辑 `scripts/monitor_client.py` 中的服务器地址和授权信息，执行：
 ```bash
-python monitor_client.py
+python scripts/monitor_client.py
 ```
 
 ## 📦 部署建议
@@ -91,7 +97,7 @@ python monitor_client.py
 - 使用 Gunicorn 或 uWSGI 作为生产 WSGI 服务器
 - Nginx 做反向代理与静态文件托管
 - 前端构建后部署到同一域名下的子目录或 CDN
-- 配置定时任务（Cron/Windows Task Scheduler）执行 `cleanup_data.py`
+- 配置定时任务（Cron/Windows Task Scheduler）执行 `scripts/cleanup_data.py`
 
 
 
