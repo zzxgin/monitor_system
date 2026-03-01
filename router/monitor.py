@@ -3,7 +3,7 @@
 支持批量数据提交和IP地址匹配
 """
 
-from flask import request
+from flask import request, current_app
 from flask_restful import Resource
 from lib.response import response
 from model.models import MonitorData, Server
@@ -11,6 +11,7 @@ from model.models import db
 from lib.jwt_utils import admin_required
 from lib.api_auth import api_key_required
 from mail.alert import check_and_send_alert_by_ip
+from lib.async_tasks import executor, async_process_monitor_data
 
 #监控数据API资源类
 class MonitorDataAPI(Resource):
@@ -41,40 +42,18 @@ class MonitorDataAPI(Resource):
             if not server:
                 return response(message="服务器不存在", code=400)
 
-            # 创建监控数据（包含所有指标）
-            try:
-                # 支持两种字段名格式：cpu_value/cpu, memory_value/memory, disk_value/disk
-                cpu_value = metrics.get('cpu_value', metrics.get('cpu', 0.0))
-                memory_value = metrics.get('memory_value', metrics.get('memory', 0.0))
-                disk_value = metrics.get('disk_value', metrics.get('disk', 0.0))
+            # 异步处理：将数据入库和告警检查放入后台线程池
+            # 注意：需要传递当前的app对象，以便在线程中创建上下文
+            # 使用 _get_current_object() 获取真实的 app 对象
+            executor.submit(
+                async_process_monitor_data, 
+                current_app._get_current_object(), 
+                server.ip_address, 
+                metrics
+            )
 
-                # 调试信息：显示提交的IP地址和服务器IP地址
-
-                monitor_data = MonitorData.create_by_ip(
-                    server.ip_address,
-                    cpu_value,
-                    memory_value,
-                    disk_value
-                )
-
-
-            except ValueError as e:
-                return response(message=str(e), code=400)
-
-            # 检查告警（统一使用IP地址）
-            try:
-                # 处理告警检查，支持两种字段名格式
-                alert_metrics = {
-                    'cpu': cpu_value,
-                    'memory': memory_value,
-                    'disk': disk_value
-                }
-                for metric_type, value in alert_metrics.items():
-                    check_and_send_alert_by_ip(server.ip_address, metric_type, float(value))
-            except Exception as e:
-                pass  # 告警检查失败不影响主流程
-
-            return response(message="监控数据提交成功")
+            # 立即返回成功，不再等待数据库和邮件
+            return response(message="监控数据已接收，正在后台处理")
 
         except Exception as e:
             return response(message="提交监控数据失败", code=500)
