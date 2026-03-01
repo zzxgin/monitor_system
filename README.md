@@ -20,6 +20,9 @@
   - 支持 CPU/内存/磁盘阈值告警
   - 超阈值时发送邮件给关联用户
   - 阈值通过配置文件调整
+- **异步处理**
+  - 使用线程池（ThreadPoolExecutor）异步处理监控数据入库与告警通知
+  - 提升高并发场景下的接口响应速度，防止 Agent 请求阻塞
 - **安全与跨域**
   - JWT 登录验证与 API 授权认证
   - Flask-CORS 实现跨域访问
@@ -34,7 +37,11 @@ monitor_system/
 ├── config/                   # 配置文件
 ├── model/                    # SQLAlchemy 数据模型
 ├── router/                   # 各模块路由
-├── lib/                      # 工具类（认证、响应封装等）
+├── lib/                      # 工具类
+│   ├── api_auth.py           # API认证工具
+│   ├── async_tasks.py        # 异步任务处理（数据入库与告警）
+│   ├── jwt_utils.py          # JWT工具函数
+│   └── response.py           # 统一响应格式
 ├── mail/                     # 告警邮件模块
 ├── migrations/               # 数据库迁移文件
 ├── frontend/                 # Vue 3 前端项目
