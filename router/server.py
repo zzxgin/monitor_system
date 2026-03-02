@@ -5,8 +5,9 @@
 
 from flask import request
 from flask_restful import Resource
+from flask_jwt_extended import get_jwt_identity
 from lib.response import response
-from model import Server, User, ServerGroup
+from model import Server, User, ServerGroup, AuditLog
 from lib.jwt_utils import admin_required
 from model import db
 
@@ -103,6 +104,11 @@ class ServerManagement(Resource):
             except Exception:
                 pass
 
+            # 记录审计日志
+            current_user_id = get_jwt_identity()
+            current_user = User.get_by_id(current_user_id) if current_user_id else None
+            AuditLog.log(current_user, 'CREATE_SERVER', f'server_id={server.id}', details=f'name={server_name}, ip={ip_address}')
+
             return response(data=server_data, message="服务器创建成功")
 
         except Exception as e:
@@ -165,6 +171,12 @@ class ServerManagement(Resource):
                     server_data['group_name'] = server.group.name
             except Exception:
                 pass
+
+            # 记录审计日志
+            current_user_id = get_jwt_identity()
+            current_user = User.get_by_id(current_user_id) if current_user_id else None
+            AuditLog.log(current_user, 'UPDATE_SERVER', f'server_id={server_id}', details=str(data))
+
             return response(data=server_data, message="服务器更新成功")
 
         except Exception as e:
@@ -180,6 +192,11 @@ class ServerManagement(Resource):
                 return response(message="服务器不存在", code=404)
 
             Server.delete(server_id)
+
+            # 记录审计日志
+            current_user_id = get_jwt_identity()
+            current_user = User.get_by_id(current_user_id) if current_user_id else None
+            AuditLog.log(current_user, 'DELETE_SERVER', f'server_id={server_id}')
 
             return response(message="服务器删除成功")
 

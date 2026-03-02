@@ -47,4 +47,4 @@ class Auth(Resource):
             return response(data=user_data,message="登录成功")
 
         except Exception as e:
-            return response(message="登录失败", code=500)
+            return response(message=f"登录失败: {str(e)}", code=500)
