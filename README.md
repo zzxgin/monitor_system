@@ -1,110 +1,114 @@
-# 服务器监控系统（flask_monitor）
+# Flask 企业级服务器监控系统 (Monitor System)
 
-基于 Flask 开发的轻量级服务器监控平台，适用于中小型企业内部网络。系统能够集中管理多台服务器的资源使用情况，并对异常状态进行邮件告警。
+基于 Flask + Vue 3 开发的现代化服务器监控平台，旨在为中小型企业提供轻量级、可扩展的 IT 基础设施监控解决方案。系统支持服务器资源实时监控、精细化告警策略、资产分组管理及操作审计。
 
-## 🚀 功能概览
+## 🚀 核心功能
 
-- **用户与认证**
-  - 管理员登录（JWT）
-  - 用户 CRUD（新增/查询/编辑/删除）
-  - 当前用户信息查询与密码重置
-- **服务器管理**
-  - 服务器 CRUD 操作
-  - 用户与服务器的多对多关联维护
-  - 查询用户所关联的服务器列表
-- **监控数据**
-  - Agent 通过 API 上报 CPU/内存/磁盘等资源数据（带授权认证）
-  - 查询所有服务器的最新监控数据
-  - 统计展示每台服务器的资源使用率并与阈值对比
-- **告警与通知**
-  - 支持 CPU/内存/磁盘阈值告警
-  - 超阈值时发送邮件给关联用户
-  - 阈值通过配置文件调整
-- **异步处理**
-  - 使用线程池（ThreadPoolExecutor）异步处理监控数据入库与告警通知
-  - 提升高并发场景下的接口响应速度，防止 Agent 请求阻塞
-- **安全与跨域**
-  - JWT 登录验证与 API 授权认证
-  - Flask-CORS 实现跨域访问
-- **维护脚本**
-  - 定期清理历史监控数据（`scripts/cleanup_data.py`）
+### 1. 资产管理 (CMDB Lite)
+- **服务器管理**：支持服务器的增删改查（CRUD），维护 IP、端口、描述等信息。
+- **分组管理**：【新增】支持服务器按业务线或环境分组（如：后端组、生产环境），便于批量管理。
+- **多用户关联**：支持多对多权限分配，用户仅可查看被授权的服务器。
 
-## 📁项目结构 
+### 2. 监控与数据采集
+- **Agent 上报**：提供 Python 编写的轻量级 Agent (`scripts/monitor_client.py`)，自动采集 CPU、内存、磁盘使用率。
+- **高并发处理**：后端采用**异步线程池** (`ThreadPoolExecutor`) 处理监控数据上报，解耦入库与告警逻辑，提升接口吞吐量。
+- **实时看板**：前端实时展示服务器资源水位。
+- **趋势可视化**：【新增】集成 ECharts 图表库，提供服务器 CPU、内存、磁盘利用率的 24 小时历史趋势折线图，辅助运维人员精确定位故障时间点。
+
+### 3. 企业级告警系统
+- **动态阈值配置**：【新增】不再使用全局硬编码阈值，支持为每台服务器单独配置告警规则（CPU/内存/磁盘阈值、静默时间）。
+- **告警记录**：【新增】完整记录历史告警信息 (`AlertHistory`)，便于故障复盘和 SLA 统计。
+- **邮件通知**：触发阈值时自动发送邮件给关联负责人。
+
+### 4. 安全与审计
+- **操作审计**：【新增】关键操作（如删除服务器、修改规则）自动记录审计日志 (`AuditLog`)，满足合规要求。
+- **API 安全**：
+    - 管理后台：集成 JWT (JSON Web Token) 认证。
+    - Agent 上报：支持 API Key 签名认证，防止恶意数据注入。
+
+### 5. 系统架构
+- **后端**：Flask + SQLAlchemy + MySQL + Flask-Restful (RESTful API 规范)
+- **前端**：Vue 3 + Vite + ECharts (可视化图表) + 原生 CSS (轻量化无外部 UI 库)
+- **部署**：支持 Docker 容器化部署，包含 Dockerfile 与 docker-compose.yml。
+
+## 📁 项目结构  
 
 ```
 monitor_system/
-├── app.py                    # Flask应用入口
+├── app.py                    # Flask 应用入口
 ├── config/                   # 配置文件
-├── model/                    # SQLAlchemy 数据模型
-├── router/                   # 各模块路由
-├── lib/                      # 工具类
-│   ├── api_auth.py           # API认证工具
-│   ├── async_tasks.py        # 异步任务处理（数据入库与告警）
-│   ├── jwt_utils.py          # JWT工具函数
-│   └── response.py           # 统一响应格式
-├── mail/                     # 告警邮件模块
-├── migrations/               # 数据库迁移文件
-├── frontend/                 # Vue 3 前端项目
-├── scripts/                  # 维护脚本与客户端
-│   ├── monitor_client.py     # 监控 Agent 示例
-│   └── cleanup_data.py       # 清理脚本
-├── requirements.txt          # Python 依赖
-└── README.md                 # 项目说明（当前文件）
+├── model/                    # 数据模型层 (Refactored)
+│   ├── base.py                   # 数据库实例
+│   ├── user.py                   # 用户模型
+│   ├── server.py                 # 服务器与分组模型
+│   ├── monitor.py                # 监控数据与告警模型
+│   ├── audit.py                  # 审计日志模型
+│   └── associations.py           # 关联表
+├── router/                   # API 路由层
+│   ├── server.py                 # 服务器/分组管理接口
+│   ├── monitor.py                # 监控数据接口
+│   └── ...
+├── lib/                      # 核心工具库
+│   ├── async_tasks.py            # 异步任务队列
+│   └── api_auth.py               # 签名认证
+├── mail/                     # 邮件告警模块
+├── frontend/                 # Vue 3 前端源码
+├── scripts/                  # 运维脚本
+│   ├── monitor_client.py         # 监控 Agent
+│   ├── create_admin.py           # 创建管理员脚本
+│   └── cleanup_data.py           # 数据清理脚本
+├── docker-compose.yml        # 容器编排文件
+└── requirements.txt          # Python 依赖
 ```
 
 ## 🛠️ 快速开始
 
-1. 克隆仓库并进入目录：
-   ```bash
-   git clone <repo-url> monitor_system
-   cd monitor_system
-   ```
-2. 创建并激活 Python 虚拟环境：
-   ```bash
-   python -m venv .venv
-   .\.venv\Scripts\activate   # Windows
-   source .venv/bin/activate    # macOS/Linux
-   ```
-3. 安装依赖：
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. 配置环境变量：
-   复制 `.env.example` 为 `.env`，并填写数据库、JWT、邮件等信息
-   ```bash
-   cp .env.example .env
-   # Windows: copy .env.example .env
-   ```
-5. 初始化数据库并执行迁移：
-   ```bash
-   flask db init
-   flask db migrate
-   flask db upgrade
-   ```
-6. 运行后端服务：
-   ```bash
-   python app.py
-   ```
-7. 启动前端（进入 `frontend` 目录）：
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+### 1. 环境准备
+- Python 3.8+
+- MySQL 5.7+ / 8.0
+- Node.js 16+ (用于前端开发)
 
-## 📬 运行监控 Agent
-
-编辑 `scripts/monitor_client.py` 中的服务器地址和授权信息，执行：
+### 2. 后端部署
 ```bash
+# 1. 安装依赖
+pip install -r requirements.txt
+
+# 2. 配置环境变量
+cp .env.example .env
+# 修改 .env 中的数据库连接信息 (DB_HOST, DB_USER, DB_PASS...)
+
+# 3. 初始化数据库
+flask db upgrade
+
+# 4. 创建管理员账号
+python scripts/create_admin.py
+
+# 5. 启动服务
+python app.py
+```
+
+### 3. 前端启动
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 4. 启动监控 Agent
+在目标服务器上运行：
+```bash
+# 修改脚本中的 API_URL 指向后端地址
 python scripts/monitor_client.py
 ```
 
-## 📦 部署建议
+## 📝 开发计划
 
-- 使用 Gunicorn 或 uWSGI 作为生产 WSGI 服务器
-- Nginx 做反向代理与静态文件托管
-- 前端构建后部署到同一域名下的子目录或 CDN
-- 配置定时任务（Cron/Windows Task Scheduler）执行 `scripts/cleanup_data.py`
+- [x] 服务器分组管理：后端支持分组API，前端Vue3实现了分组查询与创建。
+- [x] 动态告警规则：后端逻辑支基于单台服务器的阈值判定。
+- [x] 操作审计日志：核心操作（增删改）已集成 `AuditLog` 记录。
+- [x] 历史趋势图表可视化：前端集成 `ECharts`，实现 CPU/内存/磁盘 24小时数据折线图。
+- [x] 告警历史记录：告警触发后自动写入数据库，支持故障回溯。
+- [x] 告警规则前端配置页面：支持规则增删改查及告警历史查询。
 
 
 
