@@ -29,7 +29,7 @@
 - **维护脚本**
   - 定期清理历史监控数据（`scripts/cleanup_data.py`）
 
-## 📁 项目结构
+## 📁项目结构 
 
 ```
 monitor_system/
