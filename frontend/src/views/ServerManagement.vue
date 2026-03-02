@@ -3,9 +3,14 @@
     <div class="page-header">
       <div class="card-header">
         <h2>服务器管理</h2>
-        <button class="btn btn-primary" @click="showAddDialog = true">
-          添加服务器
-        </button>
+        <div>
+          <button class="btn" @click="openGroupManager" style="margin-right: 10px">
+            分组管理
+          </button>
+          <button class="btn btn-primary" @click="showAddDialog = true">
+            添加服务器
+          </button>
+        </div>
       </div>
     </div>
 
@@ -18,9 +23,9 @@
             <tr>
               <th>ID</th>
               <th>服务器名称</th>
+              <th>分组</th>
               <th>IP地址</th>
               <th>端口</th>
-              <!-- 状态列已删除 -->
               <th>关联用户</th>
               <th>创建时间</th>
               <th>操作</th>
@@ -30,9 +35,12 @@
             <tr v-for="server in servers" :key="server.id">
               <td>{{ server.id }}</td>
               <td>{{ server.server_name }}</td>
+              <td>
+                <span v-if="server.group_name" class="group-tag">{{ server.group_name }}</span>
+                <span v-else class="text-muted">-</span>
+              </td>
               <td>{{ server.ip_address }}</td>
               <td>{{ server.port }}</td>
-              <!-- 状态列已删除 -->
               <td>
                 <span v-for="user in server.users" :key="user.id" class="user-tag">
                   {{ user.username }}
@@ -63,6 +71,15 @@
             <input v-model="serverForm.server_name" placeholder="请输入服务器名称" />
           </div>
           <div class="form-group">
+            <label>所属分组</label>
+            <select v-model="serverForm.group_id" class="form-select">
+              <option :value="null">-- 无分组 --</option>
+              <option v-for="group in groups" :key="group.id" :value="group.id">
+                {{ group.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>IP地址</label>
             <input v-model="serverForm.ip_address" placeholder="请输入IP地址" />
           </div>
@@ -74,6 +91,48 @@
         <div class="dialog-footer">
           <button class="btn" @click="showAddDialog = false">取消</button>
           <button class="btn btn-primary" @click="saveServer">确定</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 分组管理对话框 -->
+    <div v-if="showGroupDialog" class="dialog-overlay" @click="showGroupDialog = false">
+      <div class="dialog" @click.stop>
+        <div class="dialog-header">
+          <h3>分组管理</h3>
+          <button class="close-btn" @click="showGroupDialog = false">&times;</button>
+        </div>
+        <div class="dialog-body">
+          <!-- 创建分组表单 -->
+          <div class="create-group-form" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #ebeef5; padding-bottom: 20px;">
+            <input v-model="newGroupForm.name" placeholder="分组名称" style="flex: 1;" />
+            <input v-model="newGroupForm.description" placeholder="描述(可选)" style="flex: 2;" />
+            <button class="btn btn-primary" @click="createGroup">新建</button>
+          </div>
+          
+          <!-- 分组列表 -->
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>名称</th>
+                <th>描述</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="group in groups" :key="group.id">
+                <td>{{ group.id }}</td>
+                <td>{{ group.name }}</td>
+                <td>{{ group.description || '-' }}</td>
+              </tr>
+              <tr v-if="groups.length === 0">
+                <td colspan="3" style="text-align: center; color: #909399;">暂无分组</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="dialog-footer">
+          <button class="btn" @click="showGroupDialog = false">关闭</button>
         </div>
       </div>
     </div>
@@ -110,39 +169,75 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-// 移除Element Plus依赖，使用原生JavaScript
 import { serverApi, userApi } from '@/api'
 
 // 响应式数据
 const loading = ref(false)
 const servers = ref([])
+const groups = ref([]) // 新增：分组列表
 const allUsers = ref([])
 const showAddDialog = ref(false)
 const showUserDialog = ref(false)
+const showGroupDialog = ref(false) // 新增：分组弹窗
 const editingServer = ref(null)
 const currentServer = ref(null)
 const selectedUserIds = ref([])
 
 const serverForm = ref({
   server_name: '',
+  group_id: null,
   ip_address: '',
   port: 22
 })
 
-// 计算属性
-const serverRules = computed(() => ({
-  server_name: [{ required: true, message: '请输入服务器名称', trigger: 'blur' }],
-  ip_address: [{ required: true, message: '请输入IP地址', trigger: 'blur' }],
-  port: [{ required: true, message: '请输入端口', trigger: 'blur' }]
-}))
+const newGroupForm = ref({
+  name: '',
+  description: ''
+})
 
 // 生命周期
 onMounted(() => {
   loadServers()
+  loadGroups()
   loadUsers()
 })
 
 // 方法
+const loadGroups = async () => {
+  try {
+    const response = await serverApi.getServerGroups()
+    if (response.code === 0) {
+      groups.value = response.data || []
+    }
+  } catch (error) {
+    console.error('加载分组失败:', error)
+  }
+}
+
+const openGroupManager = () => {
+  showGroupDialog.value = true
+}
+
+const createGroup = async () => {
+  if (!newGroupForm.value.name) {
+    alert('请输入分组名称')
+    return
+  }
+  try {
+    const response = await serverApi.createServerGroup(newGroupForm.value)
+    if (response.code === 0) {
+      alert('创建分组成功')
+      newGroupForm.value = { name: '', description: '' }
+      loadGroups() // 刷新列表
+    } else {
+      alert('创建失败: ' + (response.msg || ''))
+    }
+  } catch (error) {
+    console.error('创建分组错误:', error)
+    alert('创建分组异常')
+  }
+}
+
 const loadServers = async () => {
   try {
     loading.value = true
@@ -177,6 +272,7 @@ const editServer = (server) => {
   editingServer.value = server
   serverForm.value = {
     server_name: server.server_name,
+    group_id: server.group_id || null,
     ip_address: server.ip_address,
     port: server.port
   }
@@ -321,8 +417,6 @@ const formatDate = (dateStr) => {
   background: #f5f7fa;
 }
 
-/* 状态样式已删除 */
-
 .user-tag {
   display: inline-block;
   background: #f0f9ff;
@@ -426,7 +520,8 @@ const formatDate = (dateStr) => {
   font-weight: 500;
 }
 
-.form-group input {
+.form-group input,
+.form-group select {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #dcdfe6;
@@ -434,7 +529,8 @@ const formatDate = (dateStr) => {
   font-size: 14px;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: #409eff;
 }
@@ -466,5 +562,19 @@ const formatDate = (dateStr) => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+}
+
+.group-tag {
+  display: inline-block;
+  background: #ecf5ff;
+  color: #409eff;
+  border: 1px solid #d9ecff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.text-muted {
+  color: #c0c4cc;
 }
 </style>

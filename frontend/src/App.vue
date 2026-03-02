@@ -19,6 +19,7 @@
         <router-link to="/home" class="nav-item">首页</router-link>
         <router-link to="/servers" class="nav-item">服务器</router-link>
         <router-link to="/monitor" class="nav-item">监控数据</router-link>
+        <router-link v-if="authStore.user?.role === 'admin'" to="/alert-config" class="nav-item">告警配置</router-link>
         <router-link v-if="authStore.user?.role === 'admin'" to="/users" class="nav-item">用户管理</router-link>
       </div>
       

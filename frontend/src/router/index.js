@@ -39,6 +39,12 @@ const router = createRouter({
       component: () => import('../views/UserManagement.vue'),
       meta: { requiresAuth: true, requiresAdmin: true }
     },
+    {
+      path: '/alert-config',
+      name: 'alert-config',
+      component: () => import('../views/AlertConfig.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true }
+    },
   ],
 })
 

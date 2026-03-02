@@ -113,7 +113,31 @@ export const serverApi = {
 
   // 从服务器移除用户
   removeServerUser: (serverId, userId) =>
-    api.delete(`/servers/${serverId}/users/${userId}`)
+    api.delete(`/servers/${serverId}/users/${userId}`),
+
+  // 获取服务器分组列表
+  getServerGroups: () => api.get('/server-groups'),
+
+  // 创建服务器分组
+  createServerGroup: (groupData) => api.post('/server-groups', groupData)
+}
+
+// 告警管理API
+export const alertApi = {
+  // 获取告警规则列表
+  getRules: (params) => api.get('/alert-rules', { params }),
+
+  // 创建告警规则
+  createRule: (data) => api.post('/alert-rules', data),
+
+  // 更新告警规则
+  updateRule: (ruleId, data) => api.put(`/alert-rules/${ruleId}`, data),
+
+  // 删除告警规则
+  deleteRule: (ruleId) => api.delete(`/alert-rules/${ruleId}`),
+
+  // 获取告警历史
+  getHistory: (params) => api.get('/alert-history', { params })
 }
 
 export default api
