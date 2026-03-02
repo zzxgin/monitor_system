@@ -5,8 +5,8 @@
 from flask import request
 from lib.response import response
 from flask_restful import Resource
-from model.models import db
-from model.models import User
+from model import db
+from model import User
 from lib.jwt_utils import admin_required
 
 #定义某个资源类，继承自Resource基类

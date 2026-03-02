@@ -1,7 +1,7 @@
 from flask import request
 from flask_restful import Resource
 from lib.response import response
-from model.models import User
+from model import User
 
 
 #用户登录验证api资源类，根据用户id生产token，并限制只有admin可以登录

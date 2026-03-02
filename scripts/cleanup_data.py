@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def cleanup_old_data(days=7):
     try:
         # 导入数据库模型
-        from model.models import MonitorData
+        from model import MonitorData
         from app import create_app
 
         # 创建Flask应用上下文

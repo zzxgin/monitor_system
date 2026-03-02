@@ -6,8 +6,8 @@
 from flask import request, current_app
 from flask_restful import Resource
 from lib.response import response
-from model.models import MonitorData, Server
-from model.models import db
+from model import MonitorData, Server
+from model import db
 from lib.jwt_utils import admin_required
 from lib.api_auth import api_key_required
 from mail.alert import check_and_send_alert_by_ip

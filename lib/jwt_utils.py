@@ -22,7 +22,7 @@ def admin_required(func):
     def decorated_function(*args, **kwargs):
         try:
             # 导入用户模型
-            from model.models import User
+            from model import User
 
             # 从token中提取获取当前用户ID
             current_user_id = get_jwt_identity()

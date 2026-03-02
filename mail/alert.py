@@ -2,12 +2,12 @@
 
 from datetime import datetime, timedelta
 from config.setting import DEFAULT_THRESHOLDS, ALERT_TEMPLATES, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SENDER
-from model.models import Server, User
+from model import Server, User
 
 
 # 基于IP地址的持续告警检查，如果80%以上的数据都超过阈值，认为持续告警
 def check_sustained_alert_by_ip(ip_address, metric_type, value, minutes=2):
-    from model.models import MonitorData
+    from model import MonitorData
 
     # 获取最近N分钟的数据
     start_time = datetime.utcnow() - timedelta(minutes=minutes)

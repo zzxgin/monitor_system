@@ -6,9 +6,9 @@
 from flask import request
 from flask_restful import Resource
 from lib.response import response
-from model.models import Server, User
+from model import Server, User, ServerGroup
 from lib.jwt_utils import admin_required
-from model.models import db
+from model import db
 
 #服务器管理API资源类
 class ServerManagement(Resource):
@@ -23,12 +23,13 @@ class ServerManagement(Resource):
                     return response(message="服务器不存在", code=404)
 
                 server_data = dict(server)
-                # 安全地处理users关系
+                # 补充与处理关联数据
                 try:
                     server_data['users'] = [dict(user) for user in server.users]
-                except Exception as e:
-                    # 处理服务器用户关系时出错
-                    server_data['users'] = []
+                    if server.group:
+                        server_data['group_name'] = server.group.name
+                except Exception:
+                    pass
                 return response(data=server_data, message="获取服务器信息成功")
             else:
                 # 获取所有服务器列表
@@ -36,18 +37,18 @@ class ServerManagement(Resource):
                 server_list = []
                 for server in servers:
                     server_data = dict(server)
-                    # 安全地处理users关系
                     try:
                         server_data['users'] = [dict(user) for user in server.users]
-                    except Exception as e:
-                        # 处理服务器用户关系时出错
-                        server_data['users'] = []
+                        if server.group:
+                            server_data['group_name'] = server.group.name
+                    except Exception:
+                        pass
                     server_list.append(server_data)
 
                 return response(data=server_list, message="获取服务器列表成功")
 
         except Exception as e:
-            return response(message="获取服务器信息失败", code=500)
+            return response(message=f"获取服务器信息失败: {str(e)}", code=500)
 
     #添加服务器
     @admin_required
@@ -58,6 +59,8 @@ class ServerManagement(Resource):
             ip_address = data.get('ip_address')
             port = data.get('port', 22)
             user_ids = data.get('user_ids', [])  # 关联用户列表
+            group_id = data.get('group_id')
+            description = data.get('description')
 
             # 验证必需字段
             if not all([server_name, ip_address]):
@@ -70,39 +73,40 @@ class ServerManagement(Resource):
             # 验证关联用户（支持用户名和用户ID）
             valid_user_ids = []
             for user_identifier in user_ids:
-                user = None
-                # 如果是数字，按用户ID查找
                 if isinstance(user_identifier, int):
                     user = User.get_by_id(user_identifier)
-                # 如果是字符串，按用户名查找
                 elif isinstance(user_identifier, str):
                     user = User.get_by_username(user_identifier)
+                else:
+                    continue
 
                 if user:
                     valid_user_ids.append(user.id)
-                else:
-                    # 用户不存在，跳过
-                    pass
 
             # 创建服务器
-            try:
-                server = Server.create(server_name, ip_address, port, valid_user_ids)
-            except Exception as e:
-                raise e
+            # 注意：Server.create现在支持group_id和description参数
+            server = Server.create(
+                server_name=server_name, 
+                ip_address=ip_address, 
+                port=port, 
+                group_id=group_id,
+                description=description,
+                user_ids=valid_user_ids
+            )
 
             # 构建返回数据
             server_data = dict(server)
-            # 安全地处理users关系
             try:
                 server_data['users'] = [dict(user) for user in server.users]
-            except Exception as e:
-                # 处理服务器用户关系时出错
-                server_data['users'] = []
+                if server.group:
+                    server_data['group_name'] = server.group.name
+            except Exception:
+                pass
 
             return response(data=server_data, message="服务器创建成功")
 
         except Exception as e:
-            return response(message="创建服务器失败", code=500)
+            return response(message=f"创建服务器失败: {str(e)}", code=500)
 
     #更新服务器信息
     @admin_required
@@ -126,44 +130,46 @@ class ServerManagement(Resource):
 
             if 'port' in data:
                 server.port = data['port']
+                
+            if 'group_id' in data:
+                server.group_id = data['group_id']
+                
+            if 'description' in data:
+                server.description = data['description']
 
             if 'user_ids' in data:
                 # 更新关联用户
                 user_ids = data['user_ids']
                 if isinstance(user_ids, list):
-                    # 验证所有用户是否存在（支持用户名和用户ID）
                     valid_user_ids = []
                     for user_identifier in user_ids:
-                        user = None
-                        # 如果是数字，按用户ID查找
                         if isinstance(user_identifier, int):
                             user = User.get_by_id(user_identifier)
-                        # 如果是字符串，按用户名查找
                         elif isinstance(user_identifier, str):
                             user = User.get_by_username(user_identifier)
+                        else:
+                            continue
 
                         if user:
                             valid_user_ids.append(user.id)
-                        else:
-                            # 用户不存在，跳过
-                            pass
-
+                    
                     # 更新关联用户
                     Server.update_users(server_id, valid_user_ids)
 
             db.session.commit()
 
             server_data = dict(server)
-            # 安全地处理users关系
             try:
                 server_data['users'] = [dict(user) for user in server.users]
-            except Exception as e:
-                # 处理服务器用户关系时出错
-                server_data['users'] = []
+                if server.group:
+                    server_data['group_name'] = server.group.name
+            except Exception:
+                pass
             return response(data=server_data, message="服务器更新成功")
 
         except Exception as e:
-            return response(message="更新服务器失败", code=500)
+            db.session.rollback()
+            return response(message=f"更新服务器失败: {str(e)}", code=500)
 
     #删除服务器
     @admin_required
@@ -173,7 +179,6 @@ class ServerManagement(Resource):
             if not server:
                 return response(message="服务器不存在", code=404)
 
-            server_name = server.server_name
             Server.delete(server_id)
 
             return response(message="服务器删除成功")
@@ -207,8 +212,6 @@ class ServerUserAPI(Resource):
 
             if not user:
                 return response(message="用户不存在", code=400)
-
-            user_id = user.id
 
             # 检查是否已关联
             if user in server.users:
@@ -265,3 +268,28 @@ class UserServers(Resource):
 
         except Exception as e:
             return response(message="获取用户服务器失败", code=500)
+
+# 【新增】服务器分组管理API
+class ServerGroupManagement(Resource):
+    @admin_required
+    def get(self):
+        try:
+            groups = ServerGroup.get_all()
+            return response(data=[dict(g) for g in groups], message="获取分组列表成功")
+        except Exception as e:
+            return response(message="获取分组列表失败", code=500)
+
+    @admin_required
+    def post(self):
+        try:
+            data = request.json
+            name = data.get('name')
+            description = data.get('description')
+            
+            if not name:
+                return response(message="分组名称不能为空", code=400)
+                
+            group = ServerGroup.create(name=name, description=description)
+            return response(data=dict(group), message="分组创建成功")
+        except Exception as e:
+            return response(message=f"创建分组失败: {str(e)}", code=500)

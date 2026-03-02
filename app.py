@@ -21,7 +21,7 @@ def create_app():
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
     # 导入数据库连接对象
-    from model.models import db
+    from model import db
     # 将数据库对象绑定到Flask应用
     db.init_app(app)
 

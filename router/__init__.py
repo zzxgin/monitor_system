@@ -20,7 +20,7 @@ def init_app(app):
     # # 导入所有API资源类
     from .auth import Auth
     from .user import UserManagement
-    from .server import ServerManagement, UserServers, ServerUserAPI
+    from .server import ServerManagement, UserServers, ServerUserAPI, ServerGroupManagement
     from .monitor import MonitorDataAPI, MonitorStats
     #
     # 资源类绑定api，注册路由
@@ -34,6 +34,7 @@ def init_app(app):
 
     # ==================== 服务器管理路由 ====================
     # 服务器CRUD操作（仅管理员）
+    api.add_resource(ServerGroupManagement, '/server-groups')
     api.add_resource(ServerManagement, '/servers', '/servers/<int:server_id>')
     # 用户关联的服务器列表（需要认证）
     api.add_resource(UserServers, '/user-servers')

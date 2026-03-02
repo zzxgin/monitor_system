@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from flask import current_app
-from model.models import db, MonitorData, Server
+from model import db, MonitorData, Server
 from mail.alert import check_and_send_alert_by_ip
 
 # 创建全局线程池
