@@ -143,7 +143,7 @@ class MonitorClient:
 
 
 def main():
-    API_URL = "http://192.168.10.161:5000/api"
+    API_URL = "http://192.168.245.167:5000/api"
     API_KEY = "dev-api-key-123456"
     COLLECT_INTERVAL = 30
     IP_ADDRESS = None
