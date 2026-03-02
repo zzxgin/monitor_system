@@ -22,6 +22,8 @@ def init_app(app):
     from .user import UserManagement
     from .server import ServerManagement, UserServers, ServerUserAPI, ServerGroupManagement
     from .monitor import MonitorDataAPI, MonitorStats
+    from .alert import AlertRuleAPI, AlertRuleDetailAPI, AlertHistoryAPI
+
     #
     # 资源类绑定api，注册路由
     # ==================== 认证路由 ====================
@@ -46,3 +48,10 @@ def init_app(app):
     api.add_resource(MonitorDataAPI, '/monitor/data')
     # 监控数据统计（需要认证）
     api.add_resource(MonitorStats, '/monitor/stats')
+    
+    # ==================== 告警管理路由 ====================
+    # 告警规则 CRUD
+    api.add_resource(AlertRuleAPI, '/alert-rules')
+    api.add_resource(AlertRuleDetailAPI, '/alert-rules/<int:rule_id>')
+    # 告警历史
+    api.add_resource(AlertHistoryAPI, '/alert-history')

@@ -21,6 +21,17 @@
       </div>
     </div>
 
+    <!-- 历史趋势图表 -->
+    <div v-if="selectedServerId" class="chart-section card" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <div class="card-header" style="margin-bottom: 10px;">
+        <h3 style="margin: 0; color: #303133;">历史趋势分析 (最近24小时)</h3>
+        <div v-if="historyLoading" style="font-size: 14px; color: #999;">加载中...</div>
+      </div>
+      <div class="chart-container-wrapper">
+        <div class="chart-container" ref="chartRef" style="height: 300px; width: 100%;"></div>
+      </div>
+    </div>
+
     <!-- 监控数据列表 -->
     <div class="monitor-list">
       <div v-if="loading" class="loading">加载中...</div>
@@ -85,7 +96,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick, onUnmounted } from 'vue'
+import * as echarts from 'echarts'
 // 移除Element Plus依赖，使用原生JavaScript
 import { monitorApi, serverApi } from '@/api'
 
@@ -94,6 +106,9 @@ const loading = ref(false)
 const monitorData = ref([])
 const servers = ref([])
 const selectedServerId = ref('')
+const chartRef = ref(null)
+const historyLoading = ref(false)
+let chartInstance = null
 
 // 计算属性
 const filteredData = computed(() => {
@@ -103,16 +118,38 @@ const filteredData = computed(() => {
   return monitorData.value.filter(item => item.server_id === parseInt(selectedServerId.value))
 })
 
+// 监听器
+watch(selectedServerId, async (val) => {
+  loadMonitorData()
+  if (val) {
+    // 等待DOM更新（因为v-if）
+    await nextTick()
+    loadHistoryData()
+  } else {
+    if (chartInstance) {
+      chartInstance.dispose()
+      chartInstance = null
+    }
+  }
+})
+
 // 生命周期
 onMounted(() => {
   loadServers()
   loadMonitorData()
+  window.addEventListener('resize', handleResize)
 })
 
-// 监听器
-watch(selectedServerId, () => {
-  loadMonitorData()
+onUnmounted(() => {
+  if (chartInstance) {
+    chartInstance.dispose()
+  }
+  window.removeEventListener('resize', handleResize)
 })
+
+const handleResize = () => {
+  chartInstance && chartInstance.resize()
+}
 
 // 方法
 const loadServers = async () => {
@@ -177,6 +214,63 @@ const getDiskClass = (value) => {
   if (num >= 95) return 'critical'
   if (num >= 85) return 'warning'
   return 'normal'
+}
+
+// 历史趋势图表相关方法
+const loadHistoryData = async () => {
+  if (!selectedServerId.value) return 
+
+  try {
+    historyLoading.value = true
+    // 请求历史数据
+    const res = await monitorApi.getMonitorData({ 
+        server_id: parseInt(selectedServerId.value),
+        mode: 'history',
+        hours: 24 
+    })
+    
+    if (res.code === 0) {
+      if (res.data && res.data.length > 0) {
+          initChart(res.data)
+      }
+    }
+  } catch (err) {
+    console.error('获取历史趋势失败', err)
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+const initChart = (data) => {
+    if (!chartRef.value) return
+
+    if (chartInstance) {
+        chartInstance.dispose()
+    }
+    
+    chartInstance = echarts.init(chartRef.value)
+    
+    // 数据处理
+    const times = data.map(item => new Date(item.recorded_at).toLocaleTimeString())
+    const cpuData = data.map(item => item.cpu_value)
+    const memData = data.map(item => item.memory_value)
+    const diskData = data.map(item => item.disk_value)
+
+    const option = {
+        title: { text: '' },
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['CPU', '内存', '磁盘'], bottom: 0 },
+        grid: { left: '3%', right: '4%', bottom: '10%', top: '3%', containLabel: true },
+        xAxis: { type: 'category', boundaryGap: false, data: times },
+        yAxis: { type: 'value', max: 100 },
+        series: [
+            { name: 'CPU', type: 'line', data: cpuData, showSymbol: false, smooth: true, itemStyle: { color: '#ff4d4f' } },
+            { name: '内存', type: 'line', data: memData, showSymbol: false, smooth: true, itemStyle: { color: '#1890ff' } },
+            { name: '磁盘', type: 'line', data: diskData, showSymbol: false, smooth: true, itemStyle: { color: '#52c41a' } }
+        ]
+    }
+    
+    chartInstance.setOption(option)
 }
 </script>
 

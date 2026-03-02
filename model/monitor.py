@@ -89,6 +89,16 @@ class MonitorData(db.Model):
             cls.recorded_at >= start_time
         ).order_by(cls.recorded_at.desc()).all()
 
+    #根据ID查询指定时间范围的数据（用于历史趋势图）
+    @classmethod
+    def get_history_by_server_id(cls, server_id, hours=1):
+        from datetime import timedelta
+        start_time = datetime.now() - timedelta(hours=hours)
+        return cls.query.filter(
+            cls.server_id == server_id,
+            cls.recorded_at >= start_time
+        ).order_by(cls.recorded_at.asc()).all()
+
     #清理7天前的旧数据，避免数据库过大
     @classmethod
     def delete_old_data(cls, days=7):

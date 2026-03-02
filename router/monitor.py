@@ -66,8 +66,14 @@ class MonitorDataAPI(Resource):
             server_id = request.args.get('server_id', type=int)
             metric_type = request.args.get('metric_type')
             hours = request.args.get('hours', 24, type=int)
+            mode = request.args.get('mode', 'latest')  # 新增mode参数
 
-            if server_id:
+            if mode == 'history':
+                # 获取指定服务器的历史趋势数据
+                if not server_id:
+                    return response(message="必须提供 server_id 以获取历史数据", code=400)
+                data = MonitorData.get_history_by_server_id(server_id, hours)
+            elif server_id:
                 # 获取指定服务器的数据
                 data = MonitorData.get_latest_by_server(server_id)
                 if data:
@@ -76,6 +82,7 @@ class MonitorDataAPI(Resource):
                     data = []
             else:
                 # 获取所有最新数据
+
                 data = []
                 servers = Server.get_all()
                 for server in servers:
