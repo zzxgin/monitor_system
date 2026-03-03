@@ -5,6 +5,11 @@ class AuditLog(db.Model):
     """
     【新增】审计日志表
     解决痛点：记录敏感操作，满足安全合规需求
+    表关系：
+    Users (1) <-> (N) AuditLogs
+    这是一个“逻辑上的一对多弱关联”。即一个用户可以产生多条日志。
+    为了保证审计证据的不可篡改与留存，这里有意不设置外键级联删除。
+    即使删除了用户，日志中的 user_id 与 username_snapshot 依然保留，确保操作可追溯。
     """
     __tablename__ = 'audit_logs'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

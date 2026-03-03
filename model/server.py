@@ -41,6 +41,19 @@ class ServerGroup(db.Model):
 
 #创建服务器模型，映射数据库中的servers表
 class Server(db.Model):
+    """
+    服务器模型 Server
+    表关系：
+    1. Servers (1) <-> (N) MonitorData / AlertRules / AlertHistory
+       一对多关系：一个服务器拥有多条监控记录、多条告警规则、多条历史告警。
+       级联行为：删除服务器时，会自动级联删除其所有的监控数据、规则与历史，防止孤儿数据残留。
+    
+    2. ServerGroups (1) <-> (N) Servers
+       一对多关系：一个分组包含多个服务器。
+       
+    3. Servers (N) <-> (N) Users
+       多对多关系：服务器与用户通过 server_users 中间表关联。
+    """
     __tablename__ = 'servers'
 
     id=db.Column(db.Integer,primary_key=True, autoincrement=True)
