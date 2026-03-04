@@ -1,6 +1,6 @@
 
 #调用函数是未传入参数会使用默认值
-def response(data=None,message="seccess",code=0):
+def response(data=None,message="success",code=0):
     # 如果数据为None，设置为空列表
     if data is None:
         data = []

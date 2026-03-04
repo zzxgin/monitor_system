@@ -23,6 +23,7 @@ def init_app(app):
     from .server import ServerManagement, UserServers, ServerUserAPI, ServerGroupManagement
     from .monitor import MonitorDataAPI, MonitorStats
     from .alert import AlertRuleAPI, AlertRuleDetailAPI, AlertHistoryAPI
+    from .audit import AuditLogAPI
 
     #
     # 资源类绑定api，注册路由
@@ -55,3 +56,7 @@ def init_app(app):
     api.add_resource(AlertRuleDetailAPI, '/alert-rules/<int:rule_id>')
     # 告警历史
     api.add_resource(AlertHistoryAPI, '/alert-history')
+
+    # ==================== 审计日志路由 ====================
+    # 审计日志查询（管理员专用）
+    api.add_resource(AuditLogAPI, '/audit-logs')
