@@ -8,18 +8,19 @@ import time
 import sys
 import os
 import socket
-
+import hashlib
 
 class MonitorClient:
-    def __init__(self, api_url, api_key=None, collect_interval=30, ip_address=None):
+    def __init__(self, api_url, app_id=None, secret_key=None, collect_interval=30, ip_address=None):
         self.api_url = api_url.rstrip('/')
-        self.api_key = api_key
+        self.app_id = app_id
+        self.secret_key = secret_key
         self.collect_interval = collect_interval
         self.ip_address = ip_address or self._get_local_ip()
         self.running = False
 
         print(f"服务器IP: {self.ip_address}")
-        self._test_connection()
+        # self._test_connection()
 
     def _get_local_ip(self):
         try:
@@ -30,18 +31,31 @@ class MonitorClient:
             return ip
         except:
             return "127.0.0.1"
+    
+    # 生成签名 Sign
+    def _generate_sign(self, timestamp):
+        """生成签名: sha256(appid + secret_key + timestamp)"""
+        if not self.app_id or not self.secret_key:
+            return ""
+        
+        # 拼接原始字符串
+        raw_str = f"{self.app_id}{self.secret_key}{timestamp}"
+        
+        # 计算SHA256
+        return hashlib.sha256(raw_str.encode('utf-8')).hexdigest()
 
     def _test_connection(self):
         try:
+            # 简单的联通性测试，不带鉴权
             base_url = self.api_url.replace('/api', '')
-            response = requests.get(f"{base_url}/home", timeout=5)
+            response = requests.get(f"{base_url}", timeout=5) # 访问根路径通常不需要鉴权
             if response.status_code == 200:
-                print("API连接成功")
+                print("API服务连通性检查：成功")
             else:
-                print(f"API响应异常: {response.status_code}")
+                print(f"API服务响应异常: {response.status_code}")
         except Exception as e:
-            print(f"API连接失败: {e}")
-            sys.exit(1)
+            print(f"API服务连接失败: {e}")
+            # sys.exit(1) # 不强制退出，允许重试
 
     def collect_cpu(self):
         try:
@@ -73,9 +87,15 @@ class MonitorClient:
         }
 
         try:
-            headers = {'Content-Type': 'application/json'}
-            if self.api_key:
-                headers['X-API-Key'] = self.api_key
+            timestamp = str(int(time.time()))
+            sign = self._generate_sign(timestamp)
+            
+            headers = {
+                'Content-Type': 'application/json',
+                'X-App-ID': self.app_id,
+                'X-Timestamp': timestamp,
+                'X-Sign': sign
+            }
 
             response = requests.post(
                 f"{self.api_url}/monitor/data",
@@ -143,21 +163,26 @@ class MonitorClient:
 
 
 def main():
-    API_URL = "http://192.168.245.167:5000/api"
-    API_KEY = "dev-api-key-123456"
+    API_URL = "http://127.0.0.1:5000/api"
+    # 鉴权配置 (必须与服务端 api_auth.py 中的 API_CREDENTIALS 一致)
+    APP_ID = "default_client" 
+    SECRET_KEY = "sk_default_123456"
     COLLECT_INTERVAL = 30
     IP_ADDRESS = None
 
+    # 支持命令行传参覆盖默认配置
     if len(sys.argv) > 1:
         API_URL = sys.argv[1]
     if len(sys.argv) > 2:
-        API_KEY = sys.argv[2]
+        APP_ID = sys.argv[2]
     if len(sys.argv) > 3:
-        COLLECT_INTERVAL = int(sys.argv[3])
-    if len(sys.argv) > 4:
-        IP_ADDRESS = sys.argv[4]
+        SECRET_KEY = sys.argv[3]
 
-    client = MonitorClient(API_URL, API_KEY, COLLECT_INTERVAL, IP_ADDRESS)
+    print(f"启动监控客户端...")
+    print(f"服务端地址: {API_URL}")
+    print(f"AppID: {APP_ID}")
+
+    client = MonitorClient(API_URL, APP_ID, SECRET_KEY, COLLECT_INTERVAL, IP_ADDRESS)
     client.run()
 
 
